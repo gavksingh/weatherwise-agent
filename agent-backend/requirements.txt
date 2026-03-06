@@ -8,3 +8,6 @@ mcp
 python-dotenv
 pydantic
 sse-starlette
+pytest
+pytest-asyncio
+httpx
