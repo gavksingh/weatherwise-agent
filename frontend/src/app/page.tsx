@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, FormEvent } from "react";
+import ReactMarkdown from "react-markdown";
 
 
 interface Message {
@@ -105,7 +106,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-gray-900">
       {/* Header */}
-      <header className="flex-shrink-0 border-b border-gray-700 bg-gray-850 px-6 py-4">
+      <header className="flex-shrink-0 border-b border-gray-700 bg-gray-850 px-3 py-3 sm:px-6 sm:py-4">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
             W
@@ -116,9 +117,9 @@ export default function Home() {
 
       {/* Messages area */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto px-3 py-4 sm:px-4 sm:py-6">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-6">
+            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-4 sm:gap-6">
               <div className="w-16 h-16 rounded-2xl bg-blue-600/20 flex items-center justify-center">
                 <svg
                   className="w-8 h-8 text-blue-500"
@@ -143,13 +144,13 @@ export default function Home() {
                   Ask me about weather conditions, forecasts, and more.
                 </p>
               </div>
-              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center gap-2 w-full sm:max-w-lg">
                 {EXAMPLE_QUERIES.map((query) => (
                   <button
                     key={query}
                     onClick={() => sendMessage(query)}
                     aria-label={`Ask: ${query}`}
-                    className="px-3 py-2 text-sm rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 border border-gray-700 transition-colors cursor-pointer"
+                    className="px-3 py-2 text-sm rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 border border-gray-700 transition-colors cursor-pointer text-left sm:text-center"
                   >
                     {query}
                   </button>
@@ -164,13 +165,65 @@ export default function Home() {
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 whitespace-pre-wrap text-sm leading-relaxed ${
+                    className={`max-w-[90%] sm:max-w-[80%] rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 text-sm leading-relaxed ${
                       msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-md"
+                        ? "bg-blue-600 text-white rounded-br-md whitespace-pre-wrap"
                         : "bg-gray-800 text-gray-200 rounded-bl-md"
                     }`}
                   >
-                    {msg.content}
+                    {msg.role === "assistant" && msg.content ? (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => (
+                            <p className="mb-2 last:mb-0">{children}</p>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-semibold text-gray-100">
+                              {children}
+                            </strong>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="list-disc ml-4 mb-2 space-y-1">
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal ml-4 mb-2 space-y-1">
+                              {children}
+                            </ol>
+                          ),
+                          h1: ({ children }) => (
+                            <h1 className="text-base font-bold text-gray-100 mb-1">
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="text-base font-bold text-gray-100 mb-1">
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="text-sm font-bold text-gray-100 mb-1">
+                              {children}
+                            </h3>
+                          ),
+                          code: ({ children }) => (
+                            <code className="bg-gray-700 px-1.5 py-0.5 rounded text-xs">
+                              {children}
+                            </code>
+                          ),
+                          pre: ({ children }) => (
+                            <pre className="bg-gray-700 rounded-lg p-3 overflow-x-auto mb-2 text-xs">
+                              {children}
+                            </pre>
+                          ),
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.content
+                    )}
                     {msg.role === "assistant" &&
                       !msg.content &&
                       isStreaming && (
@@ -190,10 +243,10 @@ export default function Home() {
       </main>
 
       {/* Input area */}
-      <footer className="flex-shrink-0 border-t border-gray-700 bg-gray-850 px-4 py-4">
+      <footer className="flex-shrink-0 border-t border-gray-700 bg-gray-850 px-3 py-3 sm:px-4 sm:py-4">
         <form
           onSubmit={handleSubmit}
-          className="max-w-3xl mx-auto flex gap-3 items-end"
+          className="max-w-3xl mx-auto flex gap-2 sm:gap-3 items-end"
         >
           <textarea
             value={input}
