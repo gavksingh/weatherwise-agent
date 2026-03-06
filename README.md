@@ -84,7 +84,7 @@ pip install -r requirements.txt
 pytest
 ```
 
-Tests use `pytest-asyncio` for async test support. Set your API keys in `.env` before running agent backend tests, as some tests may require live LLM/MCP connections.
+Tests use `pytest-asyncio` for async test support. All tests use mocks and dummy API keys (set automatically via `conftest.py`), so no real credentials are needed.
 
 ## Environment Variables
 
