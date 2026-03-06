@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from mcp.client.stdio import stdio_client
 logger = logging.getLogger(__name__)
 
 MCP_SERVER_SCRIPT = str(Path(__file__).resolve().parent.parent / "mcp-server" / "server.py")
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL")
 
 
 def _make_langchain_tool(name: str, description: str, input_schema: dict, session: ClientSession) -> StructuredTool:
@@ -59,19 +61,23 @@ def get_server_params() -> StdioServerParameters:
     )
 
 
-MCP_CONNECT_TIMEOUT = 30
+def create_mcp_session():
+    """Create an MCP client context.
 
-async def create_mcp_session():
-    """Create and return an MCP stdio client context and session.
+    Uses SSE transport when MCP_SERVER_URL is set (Docker), otherwise spawns
+    the MCP server as a subprocess via stdio (local development).
 
     Usage:
         async with create_mcp_session() as (read, write):
             async with ClientSession(read, write) as session:
                 ...
-
-    Raises:
-        ConnectionError: If the MCP server process fails to start.
     """
+    if MCP_SERVER_URL:
+        from mcp.client.sse import sse_client
+
+        logger.info(f"Connecting to MCP server via SSE at {MCP_SERVER_URL}")
+        return sse_client(MCP_SERVER_URL)
+
     server_path = Path(MCP_SERVER_SCRIPT)
     if not server_path.exists():
         raise ConnectionError(

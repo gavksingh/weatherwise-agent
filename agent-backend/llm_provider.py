@@ -76,14 +76,3 @@ def get_fallback_llm():
     except Exception as e:
         logger.warning(f"Could not create fallback LLM ({fallback}): {e}")
         return None
-
-
-async def invoke_with_fallback(primary_llm, messages, fallback_llm=None, **kwargs):
-    """Invoke the primary LLM; if it fails, try the fallback."""
-    try:
-        return await primary_llm.ainvoke(messages, **kwargs)
-    except Exception as e:
-        if fallback_llm is None:
-            raise
-        logger.warning(f"Primary LLM failed ({e}), falling back to secondary provider")
-        return await fallback_llm.ainvoke(messages, **kwargs)

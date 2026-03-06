@@ -264,4 +264,14 @@ async def get_weather_alerts(lat: float, lon: float) -> dict:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    import os
+
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
+    if transport == "sse":
+        mcp.run(
+            transport="sse",
+            host=os.getenv("MCP_HOST", "0.0.0.0"),
+            port=int(os.getenv("MCP_PORT", "8001")),
+        )
+    else:
+        mcp.run(transport="stdio")
