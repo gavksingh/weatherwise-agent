@@ -264,4 +264,4 @@ async def get_weather_alerts(lat: float, lon: float) -> dict:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="sse", host="0.0.0.0", port=8001)
+    mcp.run(transport="stdio")

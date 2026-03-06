@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 import httpx
 
-load_dotenv()
+load_dotenv(dotenv_path="../.env")
 
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 if not OPENWEATHER_API_KEY or OPENWEATHER_API_KEY == "your_openweather_api_key_here":

@@ -3,4 +3,8 @@ uvicorn[standard]
 langchain
 langchain-google-genai
 langchain-groq
+langgraph
+mcp
 python-dotenv
+pydantic
+sse-starlette
