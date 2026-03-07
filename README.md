@@ -15,8 +15,8 @@ An AI-powered weather assistant built with LangGraph, MCP (Model Context Protoco
 
 - **Docker & Docker Compose** (recommended) or Python 3.12+ and Node.js 22+
 - **OpenWeatherMap API key** - [get one free](https://openweathermap.org/appid)
-- **LLM API key** - at least one of:
-  - [Google Gemini](https://aistudio.google.com/apikey) (`GOOGLE_API_KEY`)
+- **LLM provider** - at least one of:
+  - [Google Cloud / Vertex AI](https://console.cloud.google.com/) — a service account JSON key with Vertex AI API enabled (`GOOGLE_APPLICATION_CREDENTIALS` + `VERTEX_PROJECT`)
   - [Groq](https://console.groq.com/keys) (`GROQ_API_KEY`)
 
 ## Quick Start (Docker)
@@ -92,7 +92,9 @@ Tests use `pytest-asyncio` for async test support. All tests use mocks and dummy
 |---|---|---|---|
 | `OPENWEATHER_API_KEY` | Yes | - | OpenWeatherMap API key |
 | `LLM_PROVIDER` | No | `google` | LLM provider: `google` or `groq` |
-| `GOOGLE_API_KEY` | If provider=google | - | Google Gemini API key |
+| `GOOGLE_APPLICATION_CREDENTIALS` | If provider=google | - | Path to GCP service account JSON |
+| `VERTEX_PROJECT` | If provider=google | - | GCP project ID |
+| `VERTEX_LOCATION` | No | `us-central1` | Vertex AI region |
 | `GROQ_API_KEY` | If provider=groq | - | Groq API key |
 | `MCP_SERVER_URL` | Docker only | - | SSE URL for MCP server (e.g., `http://mcp-server:8001/sse`) |
 | `MCP_TRANSPORT` | Docker only | `stdio` | MCP server transport: `stdio` or `sse` |

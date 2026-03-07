@@ -43,9 +43,9 @@ A FastMCP server exposing 5 weather tools that wrap the OpenWeatherMap API:
 A FastAPI service that orchestrates an LLM-powered weather agent:
 
 - **LangGraph ReAct agent**: Iteratively reasons and calls MCP tools until it has enough information to answer
-- **LLM providers**: Google Gemini (primary) or Groq with automatic fallback
-- **MCP client**: Connects to the MCP server via stdio (local) or SSE (Docker), converts MCP tools to LangChain `StructuredTool` instances
-- **Streaming**: Token-level SSE streaming via `astream_events` for real-time responses
+- **LLM providers**: Google Gemini via Vertex AI (primary) or Groq with automatic fallback. Instances are cached per-provider with `temperature=0` and `max_output_tokens=2048` for fast, deterministic responses
+- **MCP client**: Connects to the MCP server via stdio (local) or SSE (Docker), converts MCP tools to LangChain `StructuredTool` instances with Pydantic args models and type coercion for cross-provider compatibility
+- **Streaming**: Token-level SSE streaming via `astream(stream_mode="messages")` with `_extract_text()` to handle Vertex AI's list-of-parts content format
 
 ### Frontend (`frontend/`)
 
@@ -126,11 +126,11 @@ Each service maps to a Kubernetes Deployment + Service:
 
 ### Secrets Management
 
-API keys (`OPENWEATHER_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`) must never be baked into images or stored in plain ConfigMaps.
+Secrets (`OPENWEATHER_API_KEY`, `GROQ_API_KEY`, and the GCP service account JSON) must never be baked into images or stored in plain ConfigMaps. The service account JSON is mounted as a read-only volume in Docker (`/secrets/service-account.json`) and excluded from git via `project-*.json` in `.gitignore`.
 
-- **Kubernetes Secrets**: Minimum viable approach. Create an opaque Secret and mount as env vars in the relevant Deployments. Encrypt etcd at rest.
-- **External secrets operator**: For production, use External Secrets Operator to sync secrets from AWS Secrets Manager, GCP Secret Manager, or HashiCorp Vault into Kubernetes Secrets automatically.
-- **Rotation**: LLM API keys and the OpenWeatherMap key should be rotatable without redeployment. External Secrets Operator handles this via periodic sync. The services read keys at startup (no hot-reload needed - a rolling restart picks up new values).
+- **Kubernetes Secrets**: Minimum viable approach. Create an opaque Secret for API keys and a separate Secret for the service account JSON (mounted as a volume). Encrypt etcd at rest.
+- **External secrets operator**: For production, use External Secrets Operator to sync secrets from AWS Secrets Manager, GCP Secret Manager, or HashiCorp Vault into Kubernetes Secrets automatically. For GCP-native deployments, prefer Workload Identity Federation over service account keys.
+- **Rotation**: API keys and the OpenWeatherMap key should be rotatable without redeployment. External Secrets Operator handles this via periodic sync. The services read keys at startup (no hot-reload needed - a rolling restart picks up new values).
 
 ### Scaling Strategy
 
