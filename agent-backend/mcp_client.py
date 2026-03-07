@@ -3,10 +3,12 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any, Optional
 
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from pydantic import BaseModel, Field, create_model
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +16,54 @@ MCP_SERVER_SCRIPT = str(Path(__file__).resolve().parent.parent / "mcp-server" / 
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL")
 
 
+JSON_TYPE_MAP = {
+    "string": str,
+    "number": float,
+    "integer": int,
+    "boolean": bool,
+    "object": dict,
+    "array": list,
+}
+
+
+def _build_args_model(name: str, input_schema: dict) -> type[BaseModel]:
+    """Build a Pydantic model from an MCP tool's JSON Schema so LangChain
+    advertises the correct parameter names and types to the LLM."""
+    properties = input_schema.get("properties", {})
+    required = set(input_schema.get("required", []))
+    fields: dict[str, Any] = {}
+
+    for prop_name, prop_info in properties.items():
+        py_type = JSON_TYPE_MAP.get(prop_info.get("type", "string"), str)
+        field_desc = prop_info.get("description", "")
+        if prop_name in required:
+            fields[prop_name] = (py_type, Field(description=field_desc))
+        else:
+            default = prop_info.get("default")
+            fields[prop_name] = (
+                Optional[py_type],
+                Field(default=default, description=field_desc),
+            )
+
+    return create_model(f"{name}_args", **fields)
+
+
 def _make_langchain_tool(name: str, description: str, input_schema: dict, session: ClientSession) -> StructuredTool:
     """Create a LangChain StructuredTool that calls an MCP tool via the session."""
 
+    properties = input_schema.get("properties", {})
+
     async def _call_tool(**kwargs):
-        result = await session.call_tool(name, arguments=kwargs)
+        coerced = {}
+        for key, value in kwargs.items():
+            expected = properties.get(key, {}).get("type")
+            if expected == "number" and isinstance(value, str):
+                coerced[key] = float(value)
+            elif expected == "integer" and isinstance(value, str):
+                coerced[key] = int(value)
+            else:
+                coerced[key] = value
+        result = await session.call_tool(name, arguments=coerced)
         text_parts = [block.text for block in result.content if hasattr(block, "text")]
         text = "\n".join(text_parts)
         try:
@@ -26,11 +71,13 @@ def _make_langchain_tool(name: str, description: str, input_schema: dict, sessio
         except (json.JSONDecodeError, TypeError):
             return text
 
+    args_model = _build_args_model(name, input_schema)
+
     return StructuredTool.from_function(
         coroutine=_call_tool,
         name=name,
         description=description,
-        args_schema=None,
+        args_schema=args_model,
         func=lambda **kw: None,  # sync placeholder, async is used
     )
 

@@ -47,5 +47,8 @@ docker-compose.override.yml
 # Claude Code
 .claude/
 
+# Google Cloud service account credentials
+project-*.json
+
 # Misc
 *.log

@@ -2,40 +2,47 @@ import os
 import logging
 
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_groq import ChatGroq
 
 load_dotenv(dotenv_path="../.env")
 
 logger = logging.getLogger(__name__)
 
-_GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+_GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+_VERTEX_PROJECT = os.getenv("VERTEX_PROJECT")
+_VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "us-central1")
 _GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-if not _GOOGLE_API_KEY and not _GROQ_API_KEY:
-    raise ValueError(
-        "At least one LLM API key is required. "
-        "Set GOOGLE_API_KEY and/or GROQ_API_KEY in your .env file."
-    )
-
 _LLM_PROVIDER = os.getenv("LLM_PROVIDER", "google").lower()
-if _LLM_PROVIDER == "google" and not _GOOGLE_API_KEY:
-    raise ValueError("LLM_PROVIDER is 'google' but GOOGLE_API_KEY is not set.")
+
+if _LLM_PROVIDER == "google" and (not _GOOGLE_APPLICATION_CREDENTIALS or not _VERTEX_PROJECT):
+    raise ValueError(
+        "LLM_PROVIDER is 'google' but GOOGLE_APPLICATION_CREDENTIALS and/or "
+        "VERTEX_PROJECT are not set."
+    )
 if _LLM_PROVIDER == "groq" and not _GROQ_API_KEY:
     raise ValueError("LLM_PROVIDER is 'groq' but GROQ_API_KEY is not set.")
 
+if not (_GOOGLE_APPLICATION_CREDENTIALS and _VERTEX_PROJECT) and not _GROQ_API_KEY:
+    raise ValueError(
+        "At least one LLM provider must be configured. "
+        "Set GOOGLE_APPLICATION_CREDENTIALS + VERTEX_PROJECT and/or GROQ_API_KEY in your .env file."
+    )
+
 PROVIDERS = {
     "google": {
-        "class": ChatGoogleGenerativeAI,
+        "class": ChatVertexAI,
         "kwargs": {
-            "model": "gemini-2.5-flash",
-            "google_api_key": _GOOGLE_API_KEY,
+            "model_name": "gemini-2.5-flash",
+            "project": _VERTEX_PROJECT,
+            "location": _VERTEX_LOCATION,
         },
     },
     "groq": {
         "class": ChatGroq,
         "kwargs": {
-            "model": "llama-3.3-70b-versatile",
+            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
             "groq_api_key": _GROQ_API_KEY,
         },
     },

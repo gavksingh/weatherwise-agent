@@ -11,6 +11,7 @@ services:
       - MCP_PORT=8001
     networks:
       - internal
+      - default
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/sse')"]
@@ -27,8 +28,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    volumes:
+      - ./project-cf964f7d-d79b-4b69-81c-f362e2771c2b.json:/secrets/service-account.json:ro
     environment:
       - MCP_SERVER_URL=http://mcp-server:8001/sse
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/service-account.json
     depends_on:
       mcp-server:
         condition: service_healthy
