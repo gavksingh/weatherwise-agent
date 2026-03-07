@@ -13,14 +13,18 @@
 | Frontend |    | Backend  |    |  Server  |
 | (Next.js)|    | (FastAPI)|    | (FastMCP)|
 +----------+    +----------+    +----------+
-  :3000           :8000         internal only
+  :3000           :8000           :8001
 
   Browser          SSE            stdio (local)
-  <-------->    streaming         SSE (Docker)
+  <-------->    streaming         SSE (Docker/Cloud Run)
   HTTP/SSE      + proxy
 ```
 
 Users interact with the Next.js frontend, which proxies API requests to the agent backend. The agent uses LangGraph's ReAct loop to reason about the query and call weather tools exposed by the MCP server.
+
+**Deployment modes:**
+- **Local (Docker Compose)**: All 3 services on an internal Docker network. MCP server has no exposed ports.
+- **Cloud Run (GCP)**: Each service is an independent Cloud Run service. The frontend proxies to the agent backend via its Cloud Run URL (baked in at build time). The agent backend connects to the MCP server via its Cloud Run URL.
 
 ## Components
 
@@ -93,78 +97,88 @@ SSE is simpler for unidirectional server-to-client streaming. The chat pattern i
 
 The MCP server has no published ports and runs on an `internal` Docker network. Only the agent backend (on both `internal` and `default` networks) can reach it. This follows the principle of least privilege: the weather tool server has no reason to be accessible from outside the stack.
 
-## Production Deployment
+## Production Deployment (GCP Cloud Run)
 
-### Kubernetes Architecture
+### Cloud Run Architecture
 
-Each service maps to a Kubernetes Deployment + Service:
-
-```
-                    Ingress (TLS)
-                        |
-               +--------v--------+
-               |    Frontend     |  Deployment (2+ replicas)
-               |    Service      |  ClusterIP :3000
-               +--------+--------+
-                        |
-               +--------v--------+
-               |  Agent Backend  |  Deployment (2+ replicas)
-               |    Service      |  ClusterIP :8000
-               +--------+--------+
-                        |
-               +--------v--------+
-               |   MCP Server    |  Deployment (2+ replicas)
-               |    Service      |  ClusterIP :8001 (no Ingress)
-               +--------v--------+
-                        |
-                  OpenWeatherMap
-```
-
-- **Frontend**: Deployed behind an Ingress with TLS termination. The `API_URL` env var points to the agent backend's ClusterIP service (`http://agent-backend:8000`).
-- **Agent Backend**: Internal ClusterIP service, not exposed via Ingress. Receives proxied traffic from the frontend only.
-- **MCP Server**: Internal ClusterIP service with no Ingress route. Only reachable by the agent backend within the cluster. Apply a `NetworkPolicy` to restrict ingress to the agent backend namespace/labels only.
-
-### Secrets Management
-
-Secrets (`OPENWEATHER_API_KEY`, `GROQ_API_KEY`, and the GCP service account JSON) must never be baked into images or stored in plain ConfigMaps. The service account JSON is mounted as a read-only volume in Docker (`/secrets/service-account.json`) and excluded from git via `project-*.json` in `.gitignore`.
-
-- **Kubernetes Secrets**: Minimum viable approach. Create an opaque Secret for API keys and a separate Secret for the service account JSON (mounted as a volume). Encrypt etcd at rest.
-- **External secrets operator**: For production, use External Secrets Operator to sync secrets from AWS Secrets Manager, GCP Secret Manager, or HashiCorp Vault into Kubernetes Secrets automatically. For GCP-native deployments, prefer Workload Identity Federation over service account keys.
-- **Rotation**: API keys and the OpenWeatherMap key should be rotatable without redeployment. External Secrets Operator handles this via periodic sync. The services read keys at startup (no hot-reload needed - a rolling restart picks up new values).
-
-### Scaling Strategy
-
-| Service | Scaling approach | Bottleneck | Notes |
-|---|---|---|---|
-| Frontend | HPA on CPU (target 70%) | Mostly static serving, low resource | Scales easily, stateless |
-| Agent Backend | HPA on concurrent requests or CPU | LLM API latency, SSE connection hold time | Each SSE stream holds a connection open; scale on connection count, not just CPU |
-| MCP Server | HPA on CPU (target 70%) | OpenWeatherMap API rate limits | Scale conservatively; add response caching to reduce upstream calls |
-
-Key considerations:
-- **Agent Backend connections**: SSE streams are long-lived. Set appropriate `keep-alive` timeouts on the Ingress/load balancer. Use connection-count-based scaling rather than pure CPU.
-- **MCP Server caching**: Weather data doesn't change every second. Add a Redis/Valkey sidecar or shared cache to deduplicate identical geocode/weather lookups. Cache TTLs: geocode (24h), current weather (5min), forecast (15min), air quality (10min).
-- **Rate limiting**: Apply per-user rate limits at the Ingress or agent backend level to prevent abuse and protect downstream API quotas.
-
-### CI/CD Pipeline
+All 3 services are deployed to Google Cloud Run in `us-central1`:
 
 ```
-Push to main
-    |
-    v
-Lint + Type Check --> Unit Tests --> Build Images --> Push to Registry
-                                                           |
-                                                           v
-                                                   Deploy to Staging
-                                                           |
-                                                     Smoke Tests
-                                                           |
-                                                           v
-                                                 Deploy to Production
-                                                  (rolling update)
+               Cloud Run (TLS managed by GCP)
+                            |
+               +────────────v────────────+
+               | weatherwise-agent-      |
+               |   frontend              |  Cloud Run service
+               |   :3000                 |  min-instances: 1
+               +────────────+────────────+
+                            | Next.js rewrites (build-time URL)
+               +────────────v────────────+
+               | weatherwise-agent-      |
+               |   backend               |  Cloud Run service
+               |   :8000                 |  min-instances: 1
+               +────────────+────────────+
+                            | MCP over SSE
+               +────────────v────────────+
+               | weatherwise-agent-      |
+               |   mcp                   |  Cloud Run service
+               |   :8001                 |  min-instances: 1
+               +────────────+────────────+
+                            |
+                      OpenWeatherMap
 ```
 
-1. **Lint & test**: Run `ruff`/`pytest` for Python services, `eslint`/`npm run build` for frontend. Gate merges on passing checks.
-2. **Build**: Multi-platform Docker builds (`linux/amd64`, `linux/arm64`) via GitHub Actions or similar. Tag images with git SHA for traceability.
-3. **Registry**: Push to a private container registry (ECR, GCR, GHCR). Scan images for vulnerabilities (Trivy, Snyk).
-4. **Deploy**: Use Helm charts or Kustomize overlays per environment. Rolling updates with `maxSurge: 1, maxUnavailable: 0` for zero-downtime deploys.
-5. **Rollback**: Keep previous image tags. Rollback via `kubectl rollout undo` or by reverting the Helm release.
+**Live URLs:**
+- Frontend: `https://weatherwise-agent-frontend-ybn6xfzrsa-uc.a.run.app`
+- Agent Backend: `https://weatherwise-agent-backend-ybn6xfzrsa-uc.a.run.app`
+- MCP Server: `https://weatherwise-agent-mcp-ybn6xfzrsa-uc.a.run.app`
+- Swagger Docs: `https://weatherwise-agent-backend-ybn6xfzrsa-uc.a.run.app/docs`
+
+- **Frontend**: Serves the Next.js app. Backend URL is baked in at `docker build` time via `--build-arg API_URL=<backend-url>`, because Next.js `rewrites()` are compiled during `next build`.
+- **Agent Backend**: Receives proxied traffic from the frontend. Connects to the MCP server via its Cloud Run URL. Authenticates to Vertex AI (Gemini) via ADC — no JSON key file needed.
+- **MCP Server**: Runs FastMCP with SSE transport on port 8001. Only called by the agent backend.
+
+### Authentication & Secrets
+
+**Vertex AI auth**: Cloud Run uses Application Default Credentials (ADC) via a dedicated service account (`weatherwise-run@project-cf964f7d-d79b-4b69-81c.iam.gserviceaccount.com`). No JSON key file is needed — the metadata server handles auth automatically. The service account has `roles/aiplatform.user` and `roles/secretmanager.secretAccessor`.
+
+**API keys**: Stored in GCP Secret Manager and injected into containers at runtime via `--set-secrets`:
+
+| Secret | Used by |
+|---|---|
+| `weatherwise-openweather-api-key` | mcp-server, agent-backend |
+| `weatherwise-groq-api-key` | agent-backend |
+
+Secrets are never baked into images. The `deploy.sh` script reads values from the local `.env` and creates/updates Secret Manager versions. Rotation requires only updating the secret version and redeploying.
+
+### Scaling
+
+All services use Cloud Run's built-in autoscaling:
+
+| Setting | Value | Rationale |
+|---|---|---|
+| `min-instances` | 1 | Eliminates cold starts — the first request works instantly |
+| `max-instances` | 3 | Prevents runaway scaling and cost |
+
+Cloud Run scales to zero by default, but this causes a **cold start chain**: the first request must wait for all 3 services to start sequentially (frontend → backend → mcp-server), which often times out. Setting `min-instances=1` keeps one container warm per service.
+
+### Deployment Script
+
+`deploy.sh` handles the full end-to-end deployment in the correct order:
+
+```
+1. Create Artifact Registry repo (idempotent)
+2. Create service account + IAM roles
+3. Store secrets in Secret Manager from .env
+4. Build & push mcp-server and agent-backend images (linux/amd64)
+5. Deploy weatherwise-agent-mcp → capture URL
+6. Deploy weatherwise-agent-backend (with MCP_SERVER_URL) → capture URL
+7. Build frontend image with --build-arg API_URL=<backend-url>
+8. Push & deploy weatherwise-agent-frontend
+9. Print all URLs
+```
+
+The frontend is built **after** the backend is deployed because Next.js `rewrites()` in `next.config.ts` are compiled at `next build` time — the backend URL must be known and baked into the image via `--build-arg`.
+
+Images must be built with `--platform linux/amd64` when building on Apple Silicon Macs, as Cloud Run runs on `amd64`.
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full deployment guide, challenges encountered, and troubleshooting.

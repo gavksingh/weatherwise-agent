@@ -78,6 +78,25 @@ npm run dev  # starts on http://localhost:3000
 
 API calls are proxied to `http://localhost:8000` by default (configurable via `API_URL` env var).
 
+## Cloud Deployment (GCP Cloud Run)
+
+The app is deployed on Google Cloud Run with all 3 services running as separate containers:
+
+| Service | Live URL |
+|---|---|
+| Frontend | https://weatherwise-agent-frontend-ybn6xfzrsa-uc.a.run.app |
+| Agent Backend | https://weatherwise-agent-backend-ybn6xfzrsa-uc.a.run.app |
+| API Docs (Swagger) | https://weatherwise-agent-backend-ybn6xfzrsa-uc.a.run.app/docs |
+| MCP Server | https://weatherwise-agent-mcp-ybn6xfzrsa-uc.a.run.app |
+
+To deploy from scratch or redeploy after code changes:
+
+```bash
+./deploy.sh
+```
+
+The script handles everything: Artifact Registry, service account, Secret Manager, Docker builds (`linux/amd64`), and ordered Cloud Run deploys. See [DEPLOYMENT.md](DEPLOYMENT.md) for the full deployment guide, architecture, and troubleshooting.
+
 ## Testing
 
 ### MCP Server
@@ -104,7 +123,7 @@ Tests use `pytest-asyncio` for async test support. All tests use mocks and dummy
 |---|---|---|---|
 | `OPENWEATHER_API_KEY` | Yes | - | OpenWeatherMap API key |
 | `LLM_PROVIDER` | No | `google` | LLM provider: `google` or `groq` |
-| `GOOGLE_APPLICATION_CREDENTIALS` | If provider=google | - | Path to GCP service account JSON |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Local only | - | Path to GCP service account JSON (not needed on Cloud Run — ADC handles auth) |
 | `VERTEX_PROJECT` | If provider=google | - | GCP project ID |
 | `VERTEX_LOCATION` | No | `us-central1` | Vertex AI region |
 | `GROQ_API_KEY` | If provider=groq | - | Groq API key |
@@ -141,6 +160,8 @@ weatherwise-agent/
   Dockerfile.agent     # Agent backend image
   Dockerfile.frontend  # Frontend multi-stage image
   docker-compose.yml   # All 3 services with network isolation
+  deploy.sh            # GCP Cloud Run deployment script
+  DEPLOYMENT.md        # Deployment guide and troubleshooting
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for design decisions and system overview.

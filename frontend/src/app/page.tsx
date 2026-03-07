@@ -107,11 +107,17 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-gray-900">
       {/* Header */}
       <header className="flex-shrink-0 border-b border-gray-700 bg-gray-850 px-3 py-3 sm:px-6 sm:py-4">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-            W
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+              W
+            </div>
+            <h1 className="text-lg font-semibold text-gray-100">WeatherWise</h1>
           </div>
-          <h1 className="text-lg font-semibold text-gray-100">WeatherWise</h1>
+          <span className="text-xs text-gray-500">
+            Developed by{" "}
+            <span className="text-blue-400 font-medium">Gaurav Singh</span>
+          </span>
         </div>
       </header>
 

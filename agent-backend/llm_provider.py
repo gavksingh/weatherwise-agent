@@ -16,18 +16,15 @@ _GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 _LLM_PROVIDER = os.getenv("LLM_PROVIDER", "google").lower()
 
-if _LLM_PROVIDER == "google" and (not _GOOGLE_APPLICATION_CREDENTIALS or not _VERTEX_PROJECT):
-    raise ValueError(
-        "LLM_PROVIDER is 'google' but GOOGLE_APPLICATION_CREDENTIALS and/or "
-        "VERTEX_PROJECT are not set."
-    )
+if _LLM_PROVIDER == "google" and not _VERTEX_PROJECT:
+    raise ValueError("LLM_PROVIDER is 'google' but VERTEX_PROJECT is not set.")
 if _LLM_PROVIDER == "groq" and not _GROQ_API_KEY:
     raise ValueError("LLM_PROVIDER is 'groq' but GROQ_API_KEY is not set.")
 
-if not (_GOOGLE_APPLICATION_CREDENTIALS and _VERTEX_PROJECT) and not _GROQ_API_KEY:
+if not _VERTEX_PROJECT and not _GROQ_API_KEY:
     raise ValueError(
         "At least one LLM provider must be configured. "
-        "Set GOOGLE_APPLICATION_CREDENTIALS + VERTEX_PROJECT and/or GROQ_API_KEY in your .env file."
+        "Set VERTEX_PROJECT and/or GROQ_API_KEY in your .env file."
     )
 
 PROVIDERS = {
@@ -38,7 +35,7 @@ PROVIDERS = {
             "project": _VERTEX_PROJECT,
             "location": _VERTEX_LOCATION,
             "temperature": 0,
-            "max_output_tokens": 2048,
+            "max_output_tokens": 8192,
         },
     },
     "groq": {
@@ -47,7 +44,7 @@ PROVIDERS = {
             "model": "meta-llama/llama-4-scout-17b-16e-instruct",
             "groq_api_key": _GROQ_API_KEY,
             "temperature": 0,
-            "max_tokens": 2048,
+            "max_tokens": 8192,
         },
     },
 }
