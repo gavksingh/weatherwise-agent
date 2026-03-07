@@ -37,6 +37,8 @@ PROVIDERS = {
             "model_name": "gemini-2.5-flash",
             "project": _VERTEX_PROJECT,
             "location": _VERTEX_LOCATION,
+            "temperature": 0,
+            "max_output_tokens": 2048,
         },
     },
     "groq": {
@@ -44,6 +46,8 @@ PROVIDERS = {
         "kwargs": {
             "model": "meta-llama/llama-4-scout-17b-16e-instruct",
             "groq_api_key": _GROQ_API_KEY,
+            "temperature": 0,
+            "max_tokens": 2048,
         },
     },
 }
@@ -54,10 +58,15 @@ FALLBACK_ORDER = {
 }
 
 
+_llm_cache: dict = {}
+
+
 def _create_llm(provider_name: str):
-    """Create an LLM instance for the given provider."""
-    config = PROVIDERS[provider_name]
-    return config["class"](**config["kwargs"])
+    """Get or create a cached LLM instance for the given provider."""
+    if provider_name not in _llm_cache:
+        config = PROVIDERS[provider_name]
+        _llm_cache[provider_name] = config["class"](**config["kwargs"])
+    return _llm_cache[provider_name]
 
 
 def get_llm():
