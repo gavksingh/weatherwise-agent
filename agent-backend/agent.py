@@ -140,5 +140,5 @@ def _extract_response(result: dict) -> str:
     messages = result.get("messages", [])
     for msg in reversed(messages):
         if isinstance(msg, AIMessage) and msg.content:
-            return msg.content
+            return _extract_text(msg.content)
     return "I wasn't able to generate a response. Please try again."
