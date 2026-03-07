@@ -2,6 +2,18 @@
 
 An AI-powered weather assistant built with LangGraph, MCP (Model Context Protocol), and Next.js. Ask natural language questions about weather and get real-time answers powered by OpenWeatherMap.
 
+## Screenshots
+
+<p>
+  <img src="public/images/img1.png" width="45%" alt="WeatherWise — multi-step weather queries with forecasts and recommendations" />
+  &nbsp;&nbsp;
+  <img src="public/images/img2.png" width="45%" alt="WeatherWise — air quality, current weather, and 5-day forecast" />
+</p>
+
+<p>
+  <img src="public/images/mobile-view.png" width="30%" alt="WeatherWise — responsive mobile view" />
+</p>
+
 ## Features
 
 - Natural language weather queries (current conditions, forecasts, air quality, alerts)
