@@ -70,11 +70,11 @@ async def test_get_current_weather_success(mock_client):
 
     result = await get_current_weather(51.5074, -0.1278)
     assert result["location"] == "London"
-    assert result["temperature_c"] == 15.2
-    assert result["feels_like_c"] == 14.0
+    assert result["temperature_f"] == 15.2
+    assert result["feels_like_f"] == 14.0
     assert result["humidity"] == 72
     assert result["description"] == "overcast clouds"
-    assert result["wind_speed_ms"] == 3.5
+    assert result["wind_speed_mph"] == 3.5
     assert result["clouds_pct"] == 90
 
 
@@ -120,7 +120,7 @@ async def test_get_forecast_success(mock_client):
     assert result["location"] == "London"
     assert result["count"] == 2
     assert len(result["entries"]) == 2
-    assert result["entries"][0]["temperature_c"] == 12.5
+    assert result["entries"][0]["temperature_f"] == 12.5
     assert result["entries"][0]["precipitation_prob"] == 0.8
     assert result["entries"][1]["description"] == "cloudy"
 

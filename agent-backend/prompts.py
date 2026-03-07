@@ -25,7 +25,7 @@ also check alerts.
 
 - Lead with the most important information (temperature, conditions).
 - Use clear structure for multi-part answers.
-- Include units (°C, m/s, hPa) with all measurements.
+- Include units (°F, mph, hPa) with all measurements.
 - When presenting forecasts, summarize trends rather than listing every 3-hour \
 interval unless the user asks for details.
 
@@ -38,7 +38,7 @@ Steps:
 1. geocode_location("Delhi") -> get lat/lon
 2. get_current_weather(lat, lon) -> check temperature, humidity, conditions
 3. get_air_quality(lat, lon) -> check AQI and PM2.5 levels
-4. Synthesize: "It's 34°C with 65% humidity and AQI is 4 (Poor) with PM2.5 at \
+4. Synthesize: "It's 93°F with 65% humidity and AQI is 4 (Poor) with PM2.5 at \
 12.3 µg/m³. I'd recommend skipping the outdoor run today -- the combination of \
 heat and poor air quality could be harmful. Consider an indoor workout or wait \
 until early morning when AQI tends to improve."

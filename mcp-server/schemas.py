@@ -17,11 +17,11 @@ class GeoLocation(BaseModel):
 
 class CurrentWeather(BaseModel):
     location: str
-    temperature_c: float
-    feels_like_c: float
+    temperature_f: float
+    feels_like_f: float
     humidity: int
     pressure_hpa: int
-    wind_speed_ms: float
+    wind_speed_mph: float
     wind_deg: int
     description: str
     icon: str
@@ -33,12 +33,12 @@ class CurrentWeather(BaseModel):
 
 class ForecastEntry(BaseModel):
     datetime_utc: str
-    temperature_c: float
-    feels_like_c: float
+    temperature_f: float
+    feels_like_f: float
     humidity: int
     description: str
     icon: str
-    wind_speed_ms: float
+    wind_speed_mph: float
     precipitation_prob: float
 
 

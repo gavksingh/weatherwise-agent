@@ -70,25 +70,25 @@ async def get_current_weather(lat: float, lon: float) -> dict:
         lon: Longitude of the location.
 
     Returns:
-        Dict with temperature (Celsius), feels_like, humidity, pressure,
-        wind speed/direction, weather description, and cloud coverage.
+        Dict with temperature (Fahrenheit), feels_like, humidity, pressure,
+        wind speed/direction (mph), weather description, and cloud coverage.
     """
     try:
         async with get_http_client() as client:
             resp = await client.get(
                 "/data/2.5/weather",
-                params={"lat": lat, "lon": lon, "units": "metric"},
+                params={"lat": lat, "lon": lon, "units": "imperial"},
             )
             resp.raise_for_status()
             data = resp.json()
 
             result = CurrentWeather(
                 location=data.get("name", "Unknown"),
-                temperature_c=data["main"]["temp"],
-                feels_like_c=data["main"]["feels_like"],
+                temperature_f=data["main"]["temp"],
+                feels_like_f=data["main"]["feels_like"],
                 humidity=data["main"]["humidity"],
                 pressure_hpa=data["main"]["pressure"],
-                wind_speed_ms=data["wind"]["speed"],
+                wind_speed_mph=data["wind"]["speed"],
                 wind_deg=data["wind"].get("deg", 0),
                 description=data["weather"][0]["description"],
                 icon=data["weather"][0]["icon"],
@@ -121,7 +121,7 @@ async def get_forecast(lat: float, lon: float) -> dict:
         async with get_http_client() as client:
             resp = await client.get(
                 "/data/2.5/forecast",
-                params={"lat": lat, "lon": lon, "units": "metric"},
+                params={"lat": lat, "lon": lon, "units": "imperial"},
             )
             resp.raise_for_status()
             data = resp.json()
@@ -129,12 +129,12 @@ async def get_forecast(lat: float, lon: float) -> dict:
             entries = [
                 ForecastEntry(
                     datetime_utc=item["dt_txt"],
-                    temperature_c=item["main"]["temp"],
-                    feels_like_c=item["main"]["feels_like"],
+                    temperature_f=item["main"]["temp"],
+                    feels_like_f=item["main"]["feels_like"],
                     humidity=item["main"]["humidity"],
                     description=item["weather"][0]["description"],
                     icon=item["weather"][0]["icon"],
-                    wind_speed_ms=item["wind"]["speed"],
+                    wind_speed_mph=item["wind"]["speed"],
                     precipitation_prob=item.get("pop", 0.0),
                 )
                 for item in data["list"]
